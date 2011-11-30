@@ -1,0 +1,328 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:BorderContainer xmlns:fx="http://ns.adobe.com/mxml/2009"
+				   xmlns:s="library://ns.adobe.com/flex/spark"
+				   xmlns:mx="library://ns.adobe.com/flex/mx"
+				   creationComplete="creationCompleteHandler(event)"
+				   addedToStage="bordercontainer1_addedToStageHandler(event)"
+				   mouseDown="mouseDownHandler(event)"
+				   mouseMove="mouseMoveHandler(event)"
+				   mouseUp="mouseUpHandler(event)"
+				   click="clickHandler(event)"
+				   mouseEnabled="true"
+				   focusEnabled="true"
+				   xmlns:splinemovie="app.splinemovie.*"
+				   backgroundColor="0xaaaaaa"
+				   xmlns:as3spline="com.turboencabulated.as3spline.*">
+	<fx:Declarations>
+		<!-- Place non-visual elements (e.g., services, value objects) here -->
+	</fx:Declarations>
+
+	<fx:Script>
+		<![CDATA[
+			import flash.filters.*;
+
+			import mx.events.FlexEvent;
+
+			[Bindable]
+			public var spline:CatmullRomSpline2d;
+
+			public var points:Vector.<Point>=new Vector.<Point>();
+
+			public var draggingPoint:Point=null;
+
+			private var m_hoverSprite:DisplayObject;
+
+			private var m_hoverPointIndex:int;
+
+			private var pointSprites:Dictionary=new Dictionary();
+
+			private var m_tension:Number=0.5;
+
+			[Bindable]
+			public function get tensionPercent():int
+			{
+				return m_tension * 100;
+			}
+
+			public function set tensionPercent(value:int):void
+			{
+				tension=Number(value) / 100;
+			}
+
+			public function get tension():Number
+			{
+				return m_tension;
+			}
+
+			public function set tension(value:Number):void
+			{
+				m_tension=value;
+				if (spline)
+				{
+					spline.tension=m_tension;
+					renderPoints();
+				}
+			}
+
+			public function get hoverPointIndex():int
+			{
+				return m_hoverPointIndex;
+			}
+
+			public function set hoverPointIndex(value:int):void
+			{
+				if (m_hoverPointIndex == value)
+				{
+					return;
+				}
+
+				m_hoverPointIndex=value;
+
+				if (m_hoverPointIndex < 0)
+				{
+					hoverSprite=null;
+				}
+				else
+				{
+					hoverSprite=pointSprites[m_hoverPointIndex];
+				}
+			}
+
+			public function get hoverSprite():DisplayObject
+			{
+				return m_hoverSprite;
+			}
+
+			public function set hoverSprite(value:DisplayObject):void
+			{
+				if (m_hoverSprite)
+				{
+					m_hoverSprite.filters=[];
+				}
+				m_hoverSprite=value;
+
+				if (m_hoverSprite)
+				{
+					m_hoverSprite.filters=[new GlowFilter(0xff0000)];
+				}
+			}
+
+			protected function creationCompleteHandler(event:FlexEvent):void
+			{
+
+
+			}
+
+			protected function mouseDownHandler(event:MouseEvent):void
+			{
+				if (hoverPointIndex >= 0)
+				{
+					draggingPoint=points[hoverPointIndex];
+				}
+			}
+
+			protected function mouseMoveHandler(event:MouseEvent):void
+			{
+				if (draggingPoint)
+				{
+					draggingPoint.x=mouseX;
+					draggingPoint.y=mouseY;
+
+					updateSpline();
+					return;
+				}
+
+				checkHoverPoint();
+
+			}
+
+			private function checkHoverPoint():void
+			{
+				hoverPointIndex=findSplinePointUnderMouse();
+			}
+
+			protected function mouseUpHandler(event:MouseEvent):void
+			{
+				draggingPoint=null;
+				checkHoverPoint();
+			}
+
+			protected function clickHandler(event:MouseEvent):void
+			{
+				if (hoverPointIndex < 0)
+				{
+					points.push(new Point(mouseX, mouseY));
+					generateSpline();
+				}
+			}
+
+			private function renderPoints():void
+			{
+				while (renderer.numChildren)
+				{
+					renderer.removeChildAt(renderer.numChildren - 1);
+				}
+
+				var lastp:Point;
+
+				for (var i:int=0; i < points.length; ++i)
+				{
+					var p:Point=points[i];
+					var ps:Shape=new Shape();
+					ps.graphics.beginFill(0x003333);
+					ps.graphics.drawCircle(p.x, p.y, 5);
+					ps.graphics.endFill();
+
+					renderer.addChild(ps);
+
+					pointSprites[i]=ps;
+
+					if (lastp)
+					{
+						var ls:Shape=new Shape();
+						ls.graphics.lineStyle(1, 0x005500, 0.5);
+						ls.graphics.moveTo(p.x, p.y);
+						ls.graphics.lineTo(lastp.x, lastp.y);
+						renderer.addChild(ls);
+					}
+
+					lastp=p;
+
+					renderer.addChild(ps);
+				}
+
+				if (spline)
+				{
+					var steps:int=Math.max(5, spline.totalLength / 5);
+
+					var ss:Shape=new Shape();
+
+					var r:int=0xff;
+					var b:int=0x00;
+					var c:int=0;
+
+					ss.graphics.moveTo(points[1].x, points[1].y);
+
+					var out:Point=new Point();
+
+					for (var s:int=1; s <= steps; ++s)
+					{
+						var t:Number=s / steps;
+						spline.sample(t, out);
+
+//						r = lerp(0xff, 0x00, Math.min(1, 2 * (t - 0.5)));
+						b=lerp(0x00, 0xff, t); //Math.max(0, 2 * (t - 0.5)));
+
+						c=(r << 16) | (b);
+
+						ss.graphics.lineStyle(2, c, 0.8);
+						ss.graphics.lineTo(out.x, out.y);
+					}
+
+					renderer.addChild(ss);
+				}
+			}
+
+			private function lerp(a:Number, b:Number, t:Number):Number
+			{
+				return a + (b - a) * t;
+			}
+
+			private function updateSpline():void
+			{
+				if (spline)
+				{
+					spline.parameterize();
+					renderPoints();
+				}
+				else
+				{
+					generateSpline();
+				}
+			}
+
+			private function generateSpline():void
+			{
+				spline=null;
+
+				if (points.length >= 4)
+				{
+					spline=new CatmullRomSpline2d(points, m_tension);
+				}
+
+				spliner.setSpline(spline);
+				renderPoints();
+			}
+
+			private function findSplinePointUnderMouse():int
+			{
+				var closest:int=-1;
+				var closestDistanceSq:Number=Number.MAX_VALUE;
+
+				for (var i:int=0; i < points.length; ++i)
+				{
+					var p:Point=points[i];
+
+					var d:Number=distanceSq(p.x, p.y, mouseX, mouseY);
+
+					if (d < closestDistanceSq)
+					{
+						closestDistanceSq=d;
+						closest=i;
+					}
+				}
+
+				if (closestDistanceSq < 40)
+				{
+					return closest;
+				}
+
+				return -1;
+			}
+
+			private function distanceSq(x0:Number, y0:Number, x1:Number, y1:Number):Number
+			{
+				var dx:Number=x0 - x1;
+				var dy:Number=y0 - y1;
+
+				return dx * dx + dy * dy;
+			}
+
+			private function distance(x0:Number, y0:Number, x1:Number, y1:Number):Number
+			{
+				var dx:Number=x0 - x1;
+				var dy:Number=y0 - y1;
+
+				return Math.sqrt(dx * dx + dy * dy);
+			}
+
+			protected function onMyKeyDownHandler(event:KeyboardEvent):void
+			{
+				if (event.keyCode == Keyboard.DELETE)
+				{
+					if (hoverPointIndex >= 0)
+					{
+						points.splice(hoverPointIndex, 1);
+						generateSpline();
+					}
+				}
+			}
+
+			protected function bordercontainer1_addedToStageHandler(event:Event):void
+			{
+				stage.addEventListener(KeyboardEvent.KEY_DOWN, onMyKeyDownHandler);
+
+			}
+		]]>
+	</fx:Script>
+
+	<as3spline:MovieSpliner id="spliner"
+							width="100%"
+							height="100%"/>
+
+	<s:SpriteVisualElement id="renderer"
+						   width="100%"
+						   height="100%"/>
+
+
+</s:BorderContainer>

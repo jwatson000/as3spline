@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Application xmlns:fx="http://ns.adobe.com/mxml/2009"
+			   xmlns:s="library://ns.adobe.com/flex/spark"
+			   xmlns:mx="library://ns.adobe.com/flex/mx"
+			   minWidth="100"
+			   minHeight="400"
+
+			   frameRate="60" xmlns:as3spline="com.turboencabulated.as3spline.*">
+	
+	<fx:Script>
+		<![CDATA[
+			import mx.events.ItemClickEvent;
+		]]>
+	</fx:Script>
+	
+	<fx:Declarations/>
+	
+	<s:VGroup width="100%"
+			  height="100%">
+		
+		<as3spline:SplineEditView id="editView"
+									width="100%"
+									height="100%">
+			
+		</as3spline:SplineEditView>
+		
+		
+		<s:HGroup width="100%"
+				  height="60">
+			
+			<s:VGroup height="100%">
+				
+				<s:Label text="Spline Tension"/>
+				<s:HGroup>
+					
+					<s:HSlider id="tensionSlider"
+							   minimum="0"
+							   maximum="100"
+							   value="@{editView.tensionPercent}"/>
+					
+					<s:Label text="{tensionSlider.value}"
+							 minWidth="50"/>
+				</s:HGroup>
+			</s:VGroup>
+			
+			<s:CheckBox label="Tess"
+						selected="@{editView.spliner.showTesselatedMovie}"/>
+			
+			<s:CheckBox label="Wire"
+						selected="@{editView.spliner.showWire}"
+						enabled="{editView.spliner.showTesselatedMovie}"/>
+			<s:CheckBox label="Solid"
+						selected="@{editView.spliner.showSolid}"
+						enabled="{editView.spliner.showTesselatedMovie}"/>
+			
+			<s:Rect height="100%"
+					width="10">
+				<s:fill>
+					<s:SolidColor color="0xaaaaaa"
+								  alpha="0.5"/>
+				</s:fill>
+			</s:Rect>
+			
+			<s:CheckBox label="Vertical"
+						selected="@{editView.spliner.renderVertical}"/>
+			
+			<s:VGroup height="100%">
+				
+				<s:Label text="Tesselation"/>
+				<s:HGroup>
+					<s:HSlider id="tessSlider"
+							   minimum="1"
+							   maximum="20"
+							   value="@{editView.spliner.tessWidth}"/>
+					
+					<s:Label text="{tessSlider.value}"/>
+				</s:HGroup>
+			</s:VGroup>
+			
+		</s:HGroup>
+		
+		
+	</s:VGroup>
+	
+</s:Application>

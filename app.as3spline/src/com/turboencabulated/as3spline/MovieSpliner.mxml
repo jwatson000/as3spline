@@ -1,0 +1,273 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Group xmlns:fx="http://ns.adobe.com/mxml/2009"
+		 xmlns:s="library://ns.adobe.com/flex/spark"
+		 xmlns:mx="library://ns.adobe.com/flex/mx"
+		 width="400"
+		 height="300"
+		 creationComplete="group1_creationCompleteHandler(event)">
+	<fx:Declarations>
+		<!-- Place non-visual elements (e.g., services, value objects) here -->
+	</fx:Declarations>
+
+	<fx:Script>
+		<![CDATA[
+			import avmplus.getQualifiedSuperclassName;
+
+			import com.turboencabulated.as3spline.CatmullRomSpline1d;
+			import com.turboencabulated.as3spline.CatmullRomSpline2d;
+
+			import flash.utils.getQualifiedClassName;
+			import flash.utils.getTimer;
+
+			import mx.events.FlexEvent;
+			[Embed(source = "assets/test.swf", symbol = "banner_wave")]
+			public var swfClass : Class;
+
+			private var spline : CatmullRomSpline2d;
+
+			private var swf : MovieClip = new swfClass as MovieClip;
+			private var bmp : Bitmap;
+
+			private var frames : Vector.<BitmapData> = new Vector.<BitmapData>();
+			private var frame : int = 0;
+
+			private var mc : MovieClip = new MovieClip();
+
+			private var m_showWire : Boolean = false;
+			private var m_showSolid : Boolean = true;
+
+			private var totalPixels : int = 0;
+
+			[Bindable]
+			public var showTesselatedMovie : Boolean = true;
+
+			[Bindable]
+			public var renderVertical : Boolean = true;
+
+			[Bindable]
+			public var tessWidth : int = 5;
+
+			private var lastTimer : int = getTimer();
+
+			[Bindable]
+			public function get showSolid() : Boolean
+			{
+				return m_showSolid;
+			}
+
+			public function set showSolid(value : Boolean) : void
+			{
+				m_showSolid = value;
+			}
+
+			[Bindable]
+			public function get showWire() : Boolean
+			{
+				return m_showWire;
+			}
+
+			public function set showWire(value : Boolean) : void
+			{
+				m_showWire = value;
+			}
+
+			public function setSpline(s : CatmullRomSpline2d) : void
+			{
+				this.spline = s;
+			}
+
+			private function createBmpds() : void
+			{
+				var m : Matrix = new Matrix();
+
+				var rs : Vector.<Rectangle> = new Vector.<Rectangle>();
+				var rm : Rectangle = new Rectangle();
+
+				var i : int = 0;
+				for (i = 0; i < swf.totalFrames; ++i)
+				{
+					swf.gotoAndStop(i + 1);
+
+					var r : Rectangle = swf.getBounds(swf);
+					rm = rm.union(r);
+					rs.push(r);
+				}
+
+				rm.height = rm.height + 2;
+				for (i = 0; i < swf.totalFrames; ++i)
+				{
+					swf.gotoAndStop(i + 1);
+
+					var bmpd : BitmapData = new BitmapData(rm.width, rm.height, true, 0x00ff00ff);
+
+					m.tx = -rm.x;
+					m.ty = -rm.y;
+
+					bmpd.draw(swf, m);
+					frames.push(bmpd);
+				}
+
+				totalPixels = rm.width * rm.height * swf.totalFrames;
+
+				memLabel.text = "Mem: " + int((totalPixels * 4) / 1024) + " kB";
+			}
+
+			private function doRenderVertical(
+				bmpd : BitmapData,
+				verts : Vector.<Number>,
+				index : Vector.<int>,
+				uvs : Vector.<Number>) : void
+			{
+				var steps : int = Math.max(2, bmpd.width / tessWidth);
+
+				var out : Point = new Point();
+				
+				for (var s : int = 0; s <= steps; ++s)
+				{
+					var xt : Number = s / steps;
+					var x : Number = 10 + bmpd.width * xt;
+					var y : Number = 10;
+
+					if (spline)
+					{
+						var cxt : Number = xt * (bmpd.width / spline.totalLength);
+						spline.sample(cxt, out);
+						x = out.x;
+						y = out.y;
+					}
+
+					verts.push(x);
+					verts.push(y);
+					verts.push(x);
+					verts.push(y + bmpd.height);
+
+					uvs.push(xt);
+					uvs.push(0);
+					uvs.push(xt);
+					uvs.push(1);
+
+					if (s >= 1)
+					{
+						var si0 : int = (s - 1) * 2;
+						var si1 : int = si0 + 1;
+						var si2 : int = si0 + 2;
+						var si3 : int = si0 + 3;
+
+						index.push(si0);
+						index.push(si1);
+						index.push(si3);
+
+						index.push(si0);
+						index.push(si3);
+						index.push(si2);
+					}
+				}
+			}
+
+			protected function group1_enterFrameHandler(event : Event) : void
+			{
+				if (frames.length == 0)
+				{
+					return;
+				}
+
+				swf.y = this.height - 50;
+
+				var cur : int = getTimer();
+				var delta : int = cur - lastTimer;
+				lastTimer = cur;
+
+				perfLabel.text = "Ms: " + delta;
+				fpsLabel.text = "Fps: " + int(1000 / delta);
+
+				renderer.graphics.clear();
+
+				frame = (frame + 1) % frames.length;
+				swf.gotoAndStop(frame);
+
+				if (!showTesselatedMovie)
+				{
+					return;
+				}
+
+				var bmpd : BitmapData = frames[frame];
+				var verts : Vector.<Number> = new Vector.<Number>();
+				var index : Vector.<int> = new Vector.<int>();
+				var uvs : Vector.<Number> = new Vector.<Number>();
+
+				if (renderVertical)
+				{
+					doRenderVertical(bmpd, verts, index, uvs);
+				}
+				else
+				{
+
+				}
+
+				if (showSolid)
+				{
+					renderer.graphics.beginBitmapFill(bmpd, null, false, false);
+					renderer.graphics.drawTriangles(verts, index, uvs);
+					renderer.graphics.endFill();
+				}
+
+				if (showWire)
+				{
+					renderer.graphics.lineStyle(1, 0x00ffff00, 0.5);
+					renderer.graphics.drawTriangles(verts, index, null);
+				}
+
+			}
+
+			protected function group1_creationCompleteHandler(event : FlexEvent) : void
+			{
+				createBmpds();
+
+				renderer.addChild(swf);
+				swf.x = 10;
+				swf.y = this.height - 50;
+			}
+		]]>
+	</fx:Script>
+
+	
+	<s:SpriteVisualElement id="renderer"
+						   width="100%"
+						   height="100%"
+						   enterFrame="group1_enterFrameHandler(event)"/>
+
+	<s:Label id="memLabel"
+			 fontWeight="bold"
+			 right="5"
+			 top="10"/>
+
+	<s:Label id="perfLabel"
+			 fontWeight="bold"
+			 right="5"
+			 top="30"/>
+
+	<s:Label id="fpsLabel"
+			 fontWeight="bold"
+			 right="5"
+			 top="50"/>
+
+	<mx:Text  
+			 fontWeight="bold"
+			 horizontalCenter="0"
+			 top="5"
+			 textAlign="center"
+			 opaqueBackground="0x999999"
+			 mouseEnabled="false"
+			 selectable="false"
+			 >
+		
+		<mx:htmlText>
+			<![CDATA[
+<font color="#ffffff">Click to place spline points.
+Drag go move control points.
+Hover and DELETE to delete a control point.  
+4 or more control points are required for a spline.</font>]]>
+		</mx:htmlText>
+				
+	</mx:Text>
+</s:Group>
