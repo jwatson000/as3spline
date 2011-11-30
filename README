@@ -1,0 +1,16 @@
+This project requires:
+
+Flex SDK 4.5.1
+Flash Player 11
+SWF Version 13
+
+The default Flex SDK 4.5.1 does not support Flash Player 11.  
+
+You must overlay the contents of sdk_flash_11/ onto your Flex SDK folder.
+
+The flex_formatter.properties file can be imported into your Flex Formatter settings in Flash Builder.
+
+Fle Flex formatter is installed from:
+
+http://flexformatter.googlecode.com/svn/trunk/FlexFormatter/FlexPrettyPrintCommandUpdateSite/
+
