@@ -229,7 +229,26 @@
 			}
 		]]>
 	</fx:Script>
-
+	
+	<mx:Text  
+		fontWeight="bold"
+		horizontalCenter="0"
+		top="5"
+		textAlign="center"
+		opaqueBackground="0x999999"
+		mouseEnabled="false"
+		selectable="false"
+		>
+		
+		<mx:htmlText>
+			<![CDATA[
+			<font color="#ffffff">Click to place spline points.
+			Drag go move control points.
+			Hover and DELETE to delete a control point.  
+			4 or more control points are required for a spline.</font>]]>
+		</mx:htmlText>
+		
+	</mx:Text>
 	
 	<s:SpriteVisualElement id="renderer"
 						   width="100%"
@@ -251,23 +270,4 @@
 			 right="5"
 			 top="50"/>
 
-	<mx:Text  
-			 fontWeight="bold"
-			 horizontalCenter="0"
-			 top="5"
-			 textAlign="center"
-			 opaqueBackground="0x999999"
-			 mouseEnabled="false"
-			 selectable="false"
-			 >
-		
-		<mx:htmlText>
-			<![CDATA[
-<font color="#ffffff">Click to place spline points.
-Drag go move control points.
-Hover and DELETE to delete a control point.  
-4 or more control points are required for a spline.</font>]]>
-		</mx:htmlText>
-				
-	</mx:Text>
 </s:Group>
