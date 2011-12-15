@@ -10,7 +10,7 @@ You must overlay the contents of sdk_flash_11/ onto your Flex SDK folder.
 
 The flex_formatter.properties file can be imported into your Flex Formatter settings in Flash Builder.
 
-Fle Flex formatter is installed from:
+Flex formatter is installed from:
 
 http://flexformatter.googlecode.com/svn/trunk/FlexFormatter/FlexPrettyPrintCommandUpdateSite/
 
